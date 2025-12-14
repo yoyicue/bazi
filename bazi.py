@@ -542,6 +542,14 @@ def _print_shishen(lunar: Lunar, *, pretty: bool) -> None:
         print(" ".join(zhi))
 
 
+def _print_section(title: str, *, first: bool, pretty: bool) -> None:
+    if not pretty:
+        return
+    if not first:
+        print()
+    print(f"【{title}】")
+
+
 def _describe_wuxing_relation(
     a_label: str,
     a_char: str,
@@ -756,19 +764,27 @@ def main(argv: list[str]) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
+    section_first = True
+    _print_section("基础", first=section_first, pretty=ctx.pretty)
+    section_first = False
     _print_true_solar_header(ctx)
     _print_bazi(ctx.chart_lunar, pretty=ctx.pretty)
 
+    if args.shengke or args.qiangruo:
+        _print_section("五行", first=section_first, pretty=ctx.pretty)
+        section_first = False
+        if args.shengke:
+            _print_shengke(ctx.chart_lunar, pretty=ctx.pretty)
+        if args.qiangruo:
+            _print_qiangruo(ctx.chart_lunar, pretty=ctx.pretty)
+
     if args.shishen:
+        _print_section("十神", first=section_first, pretty=ctx.pretty)
+        section_first = False
         _print_shishen(ctx.chart_lunar, pretty=ctx.pretty)
 
-    if args.shengke:
-        _print_shengke(ctx.chart_lunar, pretty=ctx.pretty)
-
-    if args.qiangruo:
-        _print_qiangruo(ctx.chart_lunar, pretty=ctx.pretty)
-
     if args.yun:
+        _print_section("大运", first=section_first, pretty=ctx.pretty)
         if ctx.gender is None:
             if ctx.pretty:
                 _print_yun(
