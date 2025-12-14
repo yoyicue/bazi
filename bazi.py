@@ -8,13 +8,21 @@ from core import (
     BaziContext,
     build_context,
     compute_yun as _compute_yun,
+    format_changsheng,
     format_base,
+    format_hidden_gan,
     format_hechong,
+    format_kongwang,
+    format_liuri,
+    format_liuyue,
+    format_lunar_info,
+    format_nayin,
     format_qiangruo,
     format_shengke,
     format_shishen,
     format_shishen_flow,
     format_yongshen,
+    format_wuxing_counts,
     format_yun,
     is_forward_yun as _is_forward_yun,
     parse_interactive_datetime,
@@ -84,6 +92,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--lon", type=str, default=None, help="经度（东经为正），支持 115.45 或 E115°26'58\"")
     parser.add_argument("--lat", type=str, default=None, help="纬度（北纬为正），支持 36.49 或 N36°29'25\"（当前仅用于显示）")
+    parser.add_argument("--lunar-info", action="store_true", help="输出农历信息（生肖、节气、月令）")
+    parser.add_argument("--hidden-gan", action="store_true", help="输出各支藏干列表")
+    parser.add_argument("--wuxing-count", action="store_true", help="输出五行计数与旺衰标注")
+    parser.add_argument("--changsheng", action="store_true", help="输出长生十二运")
+    parser.add_argument("--nayin", action="store_true", help="输出四柱纳音")
+    parser.add_argument("--kongwang", action="store_true", help="输出旬空")
+    parser.add_argument("--liuyue", action="store_true", help="输出流月列表（从出生月起）")
+    parser.add_argument("--liuyue-count", type=int, default=12, help="流月数量（默认 12）")
+    parser.add_argument("--liuri", action="store_true", help="输出流日列表（从出生日起）")
+    parser.add_argument("--liuri-count", type=int, default=10, help="流日数量（默认 10）")
 
     args = parser.parse_args(argv)
 
@@ -177,6 +195,37 @@ def _render_sections(ctx: BaziContext) -> list[str]:
                     liunian_count=ctx.args.liunian_count,
                 )
             )
+
+    # 扩展事实（客观信息，不做喜忌判断）
+    has_extra = (
+        ctx.args.lunar_info
+        or ctx.args.hidden_gan
+        or ctx.args.wuxing_count
+        or ctx.args.changsheng
+        or ctx.args.nayin
+        or ctx.args.kongwang
+        or ctx.args.liuyue
+        or ctx.args.liuri
+    )
+    if has_extra:
+        lines.append("")
+        lines.append("【扩展事实】")
+        if ctx.args.lunar_info:
+            lines.extend(format_lunar_info(ctx.chart_lunar))
+        if ctx.args.hidden_gan:
+            lines.extend(format_hidden_gan(ctx.chart_lunar))
+        if ctx.args.wuxing_count:
+            lines.extend(format_wuxing_counts(ctx.chart_lunar))
+        if ctx.args.changsheng:
+            lines.extend(format_changsheng(ctx.chart_lunar))
+        if ctx.args.nayin:
+            lines.extend(format_nayin(ctx.chart_lunar))
+        if ctx.args.kongwang:
+            lines.extend(format_kongwang(ctx.chart_lunar))
+        if ctx.args.liuyue:
+            lines.extend(format_liuyue(ctx.chart_lunar, count=ctx.args.liuyue_count))
+        if ctx.args.liuri:
+            lines.extend(format_liuri(ctx.chart_lunar, count=ctx.args.liuri_count))
 
     return lines
 

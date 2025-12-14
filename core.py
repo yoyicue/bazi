@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+import calendar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterable
@@ -368,6 +369,97 @@ def format_yongshen(lunar: Lunar, *, pretty: bool) -> list[str]:
         lines.append(f"忌五行: {fmt(warn)}")
     else:
         lines.append(f"喜用:{fmt(main_useful)} 忌:{fmt(warn)} {desc}")
+    return lines
+
+
+def format_lunar_info(lunar: Lunar) -> list[str]:
+    lines: list[str] = []
+    lines.append(f"阴历: {lunar.getYearInChinese()}年{lunar.getMonthInChinese()}月{lunar.getDayInChinese()}日")
+    lines.append(f"生肖: {lunar.getYearShengXiao()}")
+    prev_jie = lunar.getPrevJie()
+    next_jie = lunar.getNextJie()
+    lines.append(
+        f"节气: 上一{prev_jie.getName()} {prev_jie.getSolar().toYmdHms()}  下一{next_jie.getName()} {next_jie.getSolar().toYmdHms()}"
+    )
+    lines.append(f"月令: {lunar.getMonthInGanZhi()} ({lunar.getMonthShengXiao()}月)")
+    return lines
+
+
+def format_hidden_gan(lunar: Lunar) -> list[str]:
+    pillars = lunar.getBaZi()
+    zhis = [p[1] for p in pillars]
+    labels = ["年支", "月支", "日支", "时支"]
+    lines: list[str] = []
+    for label, zhi in zip(labels, zhis):
+        hides = ZHI_TO_HIDDEN_GAN[zhi]
+        hides_str = " ".join(hides) if hides else "-"
+        lines.append(f"{label}{zhi} 藏干: {hides_str}")
+    return lines
+
+
+def format_wuxing_counts(lunar: Lunar) -> list[str]:
+    pillars = lunar.getBaZi()
+    gans = [p[0] for p in pillars]
+    zhis = [p[1] for p in pillars]
+    month_zhi = zhis[1]
+    season = BRANCH_TO_SEASON.get(month_zhi, "?")
+    status_map = SEASON_ELEMENT_STATUS.get(season, {e: "?" for e in ("木", "火", "土", "金", "水")})
+    counts = _calc_wuxing_counts(gans, zhis)
+    parts = [f"{e}{counts[e]}({status_map.get(e, '?')})" for e in ("木", "火", "土", "金", "水")]
+    return [f"五行计数: {' '.join(parts)}"]
+
+
+def format_changsheng(lunar: Lunar) -> list[str]:
+    ec = lunar.getEightChar()
+    lines: list[str] = []
+    lines.append(
+        f"长生十二运: 年={ec.getYearDiShi()} 月={ec.getMonthDiShi()} 日={ec.getDayDiShi()} 时={ec.getTimeDiShi()}"
+    )
+    return lines
+
+
+def format_nayin(lunar: Lunar) -> list[str]:
+    ec = lunar.getEightChar()
+    lines: list[str] = []
+    lines.append(
+        f"纳音: 年={ec.getYearNaYin()} 月={ec.getMonthNaYin()} 日={ec.getDayNaYin()} 时={ec.getTimeNaYin()}"
+    )
+    return lines
+
+
+def format_kongwang(lunar: Lunar) -> list[str]:
+    pillars = lunar.getBaZi()
+    labels = ["年柱", "月柱", "日柱", "时柱"]
+    lines: list[str] = []
+    for label, gz in zip(labels, pillars):
+        lines.append(f"{label}旬空: {LunarUtil.getXunKong(gz)}")
+    return lines
+
+
+def _add_months(dt: datetime, months: int) -> datetime:
+    year = dt.year + (dt.month - 1 + months) // 12
+    month = (dt.month - 1 + months) % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+
+def format_liuyue(lunar: Lunar, *, count: int) -> list[str]:
+    lines: list[str] = []
+    base_dt = _solar_to_datetime(lunar.getSolar())
+    for i in range(count):
+        dt = _add_months(base_dt, i)
+        l = lunar_from_datetime(dt)
+        lines.append(f"{dt.strftime('%Y-%m-%d')} 月柱: {l.getMonthInGanZhi()}")
+    return lines
+
+
+def format_liuri(lunar: Lunar, *, count: int) -> list[str]:
+    lines: list[str] = []
+    base_solar = lunar.getSolar()
+    for i in range(count):
+        s = base_solar.next(i)
+        l = s.getLunar()
+        lines.append(f"{s.toYmdHms()} 日柱: {l.getDayInGanZhi()}")
     return lines
 
 
