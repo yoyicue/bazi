@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import re
-import calendar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterable
@@ -433,33 +432,6 @@ def format_kongwang(lunar: Lunar) -> list[str]:
     lines: list[str] = []
     for label, gz in zip(labels, pillars):
         lines.append(f"{label}旬空: {LunarUtil.getXunKong(gz)}")
-    return lines
-
-
-def _add_months(dt: datetime, months: int) -> datetime:
-    year = dt.year + (dt.month - 1 + months) // 12
-    month = (dt.month - 1 + months) % 12 + 1
-    day = min(dt.day, calendar.monthrange(year, month)[1])
-    return dt.replace(year=year, month=month, day=day)
-
-
-def format_liuyue(lunar: Lunar, *, count: int) -> list[str]:
-    lines: list[str] = []
-    base_dt = _solar_to_datetime(lunar.getSolar())
-    for i in range(count):
-        dt = _add_months(base_dt, i)
-        l = lunar_from_datetime(dt)
-        lines.append(f"{dt.strftime('%Y-%m-%d')} 月柱: {l.getMonthInGanZhi()}")
-    return lines
-
-
-def format_liuri(lunar: Lunar, *, count: int) -> list[str]:
-    lines: list[str] = []
-    base_solar = lunar.getSolar()
-    for i in range(count):
-        s = base_solar.next(i)
-        l = s.getLunar()
-        lines.append(f"{s.toYmdHms()} 日柱: {l.getDayInGanZhi()}")
     return lines
 
 

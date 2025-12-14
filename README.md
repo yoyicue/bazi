@@ -35,8 +35,6 @@ python -m unittest -v
 - `--changsheng` 长生十二运
 - `--nayin` 四柱纳音
 - `--kongwang` 旬空
-- `--liuyue [--liuyue-count N]` 流月列表（从出生月起）
-- `--liuri [--liuri-count N]` 流日列表（从出生日起）
 - `--yun` 起运/大运；`--gender 男|女|1|0` 指定性别；`--liunian` 输出流年，`--liunian-count N` 数量
 - `--yun-sect 1|2` 起运口径（默认 2 = 分钟数）
 - `--true-solar` 真太阳时（需 `--lon` 经度；可配 `--lat` 仅显示）；`--true-solar-scope all|yun` 默认 yun 仅用于起运

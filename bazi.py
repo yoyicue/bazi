@@ -13,8 +13,6 @@ from core import (
     format_hidden_gan,
     format_hechong,
     format_kongwang,
-    format_liuri,
-    format_liuyue,
     format_lunar_info,
     format_nayin,
     format_qiangruo,
@@ -98,10 +96,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--changsheng", action="store_true", help="输出长生十二运")
     parser.add_argument("--nayin", action="store_true", help="输出四柱纳音")
     parser.add_argument("--kongwang", action="store_true", help="输出旬空")
-    parser.add_argument("--liuyue", action="store_true", help="输出流月列表（从出生月起）")
-    parser.add_argument("--liuyue-count", type=int, default=12, help="流月数量（默认 12）")
-    parser.add_argument("--liuri", action="store_true", help="输出流日列表（从出生日起）")
-    parser.add_argument("--liuri-count", type=int, default=10, help="流日数量（默认 10）")
 
     args = parser.parse_args(argv)
 
@@ -204,8 +198,6 @@ def _render_sections(ctx: BaziContext) -> list[str]:
         or ctx.args.changsheng
         or ctx.args.nayin
         or ctx.args.kongwang
-        or ctx.args.liuyue
-        or ctx.args.liuri
     )
     if has_extra:
         lines.append("")
@@ -222,10 +214,6 @@ def _render_sections(ctx: BaziContext) -> list[str]:
             lines.extend(format_nayin(ctx.chart_lunar))
         if ctx.args.kongwang:
             lines.extend(format_kongwang(ctx.chart_lunar))
-        if ctx.args.liuyue:
-            lines.extend(format_liuyue(ctx.chart_lunar, count=ctx.args.liuyue_count))
-        if ctx.args.liuri:
-            lines.extend(format_liuri(ctx.chart_lunar, count=ctx.args.liuri_count))
 
     return lines
 
