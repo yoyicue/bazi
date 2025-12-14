@@ -121,6 +121,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="输出干支合/冲/刑/害/破（柱间）",
     )
     parser.add_argument(
+        "--yongshen",
+        "--useful",
+        dest="yongshen",
+        action="store_true",
+        help="输出基于强弱的用神/喜忌摘要（简易扶抑思路）",
+    )
+    parser.add_argument(
+        "--liunian",
+        action="store_true",
+        help="输出大运下的流年列表（默认每步大运10年）",
+    )
+    parser.add_argument(
+        "--liunian-count",
+        type=int,
+        default=10,
+        help="每步大运输出的流年数量（默认10）",
+    )
+    parser.add_argument(
         "--qiangruo",
         "--strength",
         dest="qiangruo",
@@ -336,13 +354,14 @@ def _assess_qiangruo(lunar) -> dict[str, object]:
         "diff_power": diff_power,
         "bias": bias,
         "level": level,
+        "status_map": status_map,
     }
 
 
 def _print_qiangruo(lunar, *, pretty: bool) -> None:
     info = _assess_qiangruo(lunar)
     counts = info["counts"]
-    status_map = SEASON_ELEMENT_STATUS.get(info["season"], {e: "?" for e in ("木", "火", "土", "金", "水")})
+    status_map = info.get("status_map", SEASON_ELEMENT_STATUS.get(info["season"], {e: "?" for e in ("木", "火", "土", "金", "水")}))
     same_line = _format_wuxing_breakdown(counts, status_map, info["same_elements"])
     diff_line = _format_wuxing_breakdown(counts, status_map, info["diff_elements"])
 
@@ -365,6 +384,38 @@ def _print_qiangruo(lunar, *, pretty: bool) -> None:
         print(
             f"{info['day_gan']}{info['day_element']} {info['bias']}({info['level']}) 得令={'Y' if info['de_ling'] else 'N'} 得地={'Y' if info['de_di'] else 'N'} 同方={info['same_count']} 异方={info['diff_count']}"
         )
+
+
+def _print_yongshen(lunar, *, pretty: bool) -> None:
+    info = _assess_qiangruo(lunar)
+    day_element = info["day_element"]
+    bias = info["bias"]
+    status_map = info.get("status_map", SEASON_ELEMENT_STATUS.get(info["season"], {e: "?" for e in ("木", "火", "土", "金", "水")}))
+
+    if bias == "偏弱":
+        main_useful = [day_element, ELEMENT_MOTHER[day_element]]
+        warn = [ELEMENT_CONTROLS[day_element], ELEMENT_CONTROLLED_BY[day_element]]
+        desc = "身弱扶抑：取比劫印为喜，用以扶身；财官为忌，勿再耗克。"
+    elif bias == "偏强":
+        main_useful = [ELEMENT_CHILD[day_element], ELEMENT_CONTROLS[day_element]]
+        warn = [day_element, ELEMENT_MOTHER[day_element]]
+        desc = "身强泄耗：取食伤财为喜，泄耗日主；比劫印为忌，避免再扶。"
+    else:
+        main_useful = [day_element]
+        warn = []
+        desc = "平和：喜忌不偏，宜结合大运流年与格局再定。"
+
+    def _fmt(elements: list[str]) -> str:
+        if not elements:
+            return "-"
+        return " ".join(f"{e}({status_map.get(e, '?')})" for e in elements)
+
+    if pretty:
+        print(f"用神喜忌: {desc}")
+        print(f"喜用五行: {_fmt(main_useful)}")
+        print(f"忌五行: {_fmt(warn)}")
+    else:
+        print(f"喜用:{_fmt(main_useful)} 忌:{_fmt(warn)} {desc}")
 
 
 def _parse_gender(value: str) -> int:
@@ -850,7 +901,9 @@ class _YunDuck:
         return self.__forward
 
 
-def _print_yun(chart_lunar, yun_lunar, *, gender: int, sect: int, pretty: bool, prefix: str) -> None:
+def _print_yun(
+    chart_lunar, yun_lunar, *, gender: int, sect: int, pretty: bool, prefix: str, show_liunian: bool, liunian_count: int
+) -> None:
     is_forward = _is_forward_yun(chart_lunar, gender=gender)
     (y, m, d, h), start_solar = _compute_yun(yun_lunar, is_forward=is_forward, sect=sect)
     direction = "顺行" if is_forward else "逆行"
@@ -869,6 +922,10 @@ def _print_yun(chart_lunar, yun_lunar, *, gender: int, sect: int, pretty: bool, 
             print(
                 f"{prefix}大运{item.getIndex()}: {item.getGanZhi()} ({item.getStartYear()}-{item.getEndYear()}, 虚岁{item.getStartAge()}-{item.getEndAge()})"
             )
+            if show_liunian:
+                liu_nian = item.getLiuNian(liunian_count)
+                liu_str = " ".join(f"{ln.getYear()}{ln.getGanZhi()}(虚岁{ln.getAge()})" for ln in liu_nian)
+                print(f"{prefix}  流年: {liu_str}")
     else:
         print(f"{prefix}{start_solar.toYmdHms()} {direction} {start_offset}")
         parts = [f"{item.getStartYear()}{item.getGanZhi()}" for item in dayun_list]
@@ -897,6 +954,8 @@ def main(argv: list[str]) -> int:
             _print_shengke(ctx.chart_lunar, pretty=ctx.pretty)
         if args.qiangruo:
             _print_qiangruo(ctx.chart_lunar, pretty=ctx.pretty)
+        if args.yongshen:
+            _print_yongshen(ctx.chart_lunar, pretty=ctx.pretty)
 
     if args.shishen:
         _print_section("十神", first=section_first, pretty=ctx.pretty)
@@ -918,6 +977,8 @@ def main(argv: list[str]) -> int:
                     sect=args.yun_sect,
                     pretty=ctx.pretty,
                     prefix="男",
+                    show_liunian=args.liunian,
+                    liunian_count=args.liunian_count,
                 )
                 _print_yun(
                     ctx.chart_lunar,
@@ -926,6 +987,8 @@ def main(argv: list[str]) -> int:
                     sect=args.yun_sect,
                     pretty=ctx.pretty,
                     prefix="女",
+                    show_liunian=args.liunian,
+                    liunian_count=args.liunian_count,
                 )
             else:
                 _print_yun(
@@ -935,6 +998,8 @@ def main(argv: list[str]) -> int:
                     sect=args.yun_sect,
                     pretty=ctx.pretty,
                     prefix="男 ",
+                    show_liunian=args.liunian,
+                    liunian_count=args.liunian_count,
                 )
                 _print_yun(
                     ctx.chart_lunar,
@@ -943,6 +1008,8 @@ def main(argv: list[str]) -> int:
                     sect=args.yun_sect,
                     pretty=ctx.pretty,
                     prefix="女 ",
+                    show_liunian=args.liunian,
+                    liunian_count=args.liunian_count,
                 )
         else:
             _print_yun(
@@ -952,6 +1019,8 @@ def main(argv: list[str]) -> int:
                 sect=args.yun_sect,
                 pretty=ctx.pretty,
                 prefix="",
+                show_liunian=args.liunian,
+                liunian_count=args.liunian_count,
             )
 
     return 0
