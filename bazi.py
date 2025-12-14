@@ -56,6 +56,14 @@ ELEMENT_CONTROLLED_BY: dict[str, str] = {
 
 QIANGRUO_ROOT_DISHI = {"长生", "临官", "帝旺"}
 
+BRANCH_LIU_HE = {frozenset(("子", "丑")), frozenset(("寅", "亥")), frozenset(("卯", "戌")), frozenset(("辰", "酉")), frozenset(("巳", "申")), frozenset(("午", "未"))}
+BRANCH_LIU_CHONG = {frozenset(("子", "午")), frozenset(("丑", "未")), frozenset(("寅", "申")), frozenset(("卯", "酉")), frozenset(("辰", "戌")), frozenset(("巳", "亥"))}
+BRANCH_HAI = {frozenset(("子", "未")), frozenset(("丑", "午")), frozenset(("寅", "巳")), frozenset(("卯", "辰")), frozenset(("申", "亥")), frozenset(("酉", "戌"))}
+BRANCH_PO = {frozenset(("子", "酉")), frozenset(("丑", "辰")), frozenset(("寅", "亥")), frozenset(("卯", "午")), frozenset(("巳", "申")), frozenset(("未", "戌"))}
+BRANCH_SELF_XING = {"辰", "午", "酉", "亥"}
+BRANCH_WULI_XING = {frozenset(("子", "卯"))}
+BRANCH_SANYING = {frozenset(("寅", "巳")), frozenset(("巳", "申")), frozenset(("申", "寅"))}
+BRANCH_CAO_XING = {frozenset(("丑", "未")), frozenset(("未", "戌")), frozenset(("戌", "丑"))}
 
 @dataclass(frozen=True)
 class BaziContext:
@@ -104,6 +112,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         dest="shishen_flow",
         action="store_true",
         help="输出日主与各柱十神（天干+藏干）的生克泄耗帮关系",
+    )
+    parser.add_argument(
+        "--hechong",
+        "--conflict",
+        dest="hechong",
+        action="store_true",
+        help="输出干支合/冲/刑/害/破（柱间）",
     )
     parser.add_argument(
         "--qiangruo",
@@ -585,6 +600,68 @@ def _print_shishen_flow(lunar: Lunar, *, pretty: bool) -> None:
                 print(f"{label}(藏):{hides_line}")
 
 
+def _branch_relations(a: str, b: str) -> list[str]:
+    rels: list[str] = []
+    if a == b and a in BRANCH_SELF_XING:
+        rels.append("自刑")
+    if frozenset((a, b)) in BRANCH_LIU_HE:
+        rels.append("六合")
+    if frozenset((a, b)) in BRANCH_LIU_CHONG:
+        rels.append("冲")
+    if frozenset((a, b)) in BRANCH_SANYING or frozenset((a, b)) in BRANCH_CAO_XING or frozenset((a, b)) in BRANCH_WULI_XING:
+        rels.append("刑")
+    if frozenset((a, b)) in BRANCH_HAI:
+        rels.append("害")
+    if frozenset((a, b)) in BRANCH_PO:
+        rels.append("破")
+    return rels
+
+
+def _print_hechong(lunar: Lunar, *, pretty: bool) -> None:
+    pillars = lunar.getBaZi()
+    labels = ["年柱", "月柱", "日柱", "时柱"]
+    gans = [p[0] for p in pillars]
+    zhis = [p[1] for p in pillars]
+
+    # 天干五合
+    stem_he_map = {
+        frozenset(("甲", "己")): "合",
+        frozenset(("乙", "庚")): "合",
+        frozenset(("丙", "辛")): "合",
+        frozenset(("丁", "壬")): "合",
+        frozenset(("戊", "癸")): "合",
+    }
+
+    stem_lines: list[str] = []
+    branch_lines: list[str] = []
+
+    for i in range(len(pillars)):
+        for j in range(i + 1, len(pillars)):
+            tag = f"{labels[i]}-{labels[j]}"
+            gan_rel = stem_he_map.get(frozenset((gans[i], gans[j])))
+            if gan_rel:
+                stem_lines.append(f"{tag}: 干{gans[i]}∪{gans[j]} {gan_rel}")
+            zrel = _branch_relations(zhis[i], zhis[j])
+            if zrel:
+                rel_text = "/".join(zrel)
+                branch_lines.append(f"{tag}: 支{zhis[i]}∪{zhis[j]} {rel_text}")
+
+    if pretty:
+        if stem_lines:
+            print("天干合: " + "; ".join(stem_lines))
+        if branch_lines:
+            print("地支合冲刑害破: " + "; ".join(branch_lines))
+        if not stem_lines and not branch_lines:
+            print("合冲刑害破: 无显著关系")
+    else:
+        if stem_lines:
+            print("干合:" + ";".join(stem_lines))
+        if branch_lines:
+            print("支合冲刑害破:" + ";".join(branch_lines))
+        if not stem_lines and not branch_lines:
+            print("合冲刑害破:无")
+
+
 def _print_section(title: str, *, first: bool, pretty: bool) -> None:
     if not pretty:
         return
@@ -827,6 +904,8 @@ def main(argv: list[str]) -> int:
         _print_shishen(ctx.chart_lunar, pretty=ctx.pretty)
         if args.shishen_flow:
             _print_shishen_flow(ctx.chart_lunar, pretty=ctx.pretty)
+        if args.hechong:
+            _print_hechong(ctx.chart_lunar, pretty=ctx.pretty)
 
     if args.yun:
         _print_section("大运", first=section_first, pretty=ctx.pretty)
