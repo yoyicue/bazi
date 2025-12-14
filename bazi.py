@@ -568,14 +568,19 @@ def _print_shishen_flow(lunar: Lunar, *, pretty: bool) -> None:
         gan = gans[i]
         gan_element = GAN_TO_ELEMENT[gan]
         gan_line = f"干{gan}({gan_element})={_cat(gan_element)}"
+        zhi = zhis[i]
+        zhi_element = ZHI_TO_ELEMENT[zhi]
+        zhi_line = f"支{zhi}({zhi_element})={_cat(zhi_element)}"
         hides = ZHI_TO_HIDDEN_GAN[zhis[i]]
         hides_line = " ".join(f"{hide}({GAN_TO_ELEMENT[hide]})={_cat(GAN_TO_ELEMENT[hide])}" for hide in hides)
         if pretty:
             print(f"{label}十神流通(干): {gan_line}")
+            print(f"{label}十神流通(支): {zhi_line}")
             if hides:
                 print(f"{label}十神流通(藏干): {hides_line}")
         else:
             print(f"{label}(干):{gan_line}")
+            print(f"{label}(支):{zhi_line}")
             if hides:
                 print(f"{label}(藏):{hides_line}")
 
