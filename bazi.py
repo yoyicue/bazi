@@ -567,17 +567,17 @@ def _print_shishen_flow(lunar: Lunar, *, pretty: bool) -> None:
     for i, label in enumerate(labels):
         gan = gans[i]
         gan_element = GAN_TO_ELEMENT[gan]
-        gan_cat = _cat(gan_element)
+        gan_line = f"干{gan}({gan_element})={_cat(gan_element)}"
         hides = ZHI_TO_HIDDEN_GAN[zhis[i]]
-        parts = [f"干{gan}({gan_element})={gan_cat}"]
-        for hide in hides:
-            hide_element = GAN_TO_ELEMENT[hide]
-            parts.append(f"{hide}({hide_element})={_cat(hide_element)}")
-        line = " ".join(parts)
+        hides_line = " ".join(f"{hide}({GAN_TO_ELEMENT[hide]})={_cat(GAN_TO_ELEMENT[hide])}" for hide in hides)
         if pretty:
-            print(f"{label}十神流通: {line}")
+            print(f"{label}十神流通(干): {gan_line}")
+            if hides:
+                print(f"{label}十神流通(藏干): {hides_line}")
         else:
-            print(f"{label}:{line}")
+            print(f"{label}(干):{gan_line}")
+            if hides:
+                print(f"{label}(藏):{hides_line}")
 
 
 def _print_section(title: str, *, first: bool, pretty: bool) -> None:
