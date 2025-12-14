@@ -97,7 +97,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--wuxing-rel",
         dest="shengke",
         action="store_true",
-        help="输出天干地支五行生克关系（柱内干支 + 日主关系）",
+        help="输出天干地支五行生克关系（柱内干支 + 日主关系 + 生克泄耗帮）",
     )
     parser.add_argument(
         "--qiangruo",
@@ -187,6 +187,20 @@ def parse_interactive_datetime() -> tuple[int, int, int, int, int, int] | None:
 
 def _format_shishen_zhi(values: list[str]) -> str:
     return "/".join(values) if values else "-"
+
+
+def _relation_category(day_element: str, other_element: str) -> str:
+    if day_element == other_element:
+        return "帮"
+    if ELEMENT_MOTHER[day_element] == other_element:
+        return "生"
+    if ELEMENT_CHILD[day_element] == other_element:
+        return "泄"
+    if ELEMENT_CONTROLS[day_element] == other_element:
+        return "耗"
+    if ELEMENT_CONTROLLED_BY[day_element] == other_element:
+        return "克"
+    return "?"
 
 
 def _split_ganzhi(ganzhi: str) -> tuple[str, str]:
@@ -572,10 +586,13 @@ def _print_shengke(lunar: Lunar, *, pretty: bool) -> None:
 
     day_gan = gans[2]
     day_element = GAN_TO_ELEMENT[day_gan]
+    relations: list[tuple[str, str]] = []
+
     for idx, label in ((0, "年干"), (1, "月干"), (3, "时干")):
         other_gan = gans[idx]
         other_element = GAN_TO_ELEMENT[other_gan]
         desc = _describe_wuxing_relation("日干", day_gan, day_element, label, other_gan, other_element)
+        relations.append((f"{label}{other_gan}({other_element})", _relation_category(day_element, other_element)))
         if pretty:
             print(f"日主与天干生克: {desc}")
         else:
@@ -585,10 +602,42 @@ def _print_shengke(lunar: Lunar, *, pretty: bool) -> None:
         other_zhi = zhis[idx]
         other_element = ZHI_TO_ELEMENT[other_zhi]
         desc = _describe_wuxing_relation("日干", day_gan, day_element, label, other_zhi, other_element)
+        relations.append((f"{label}{other_zhi}({other_element})", _relation_category(day_element, other_element)))
         if pretty:
             print(f"日主与地支生克: {desc}")
         else:
             print(desc)
+
+    # 藏干生克泄耗帮
+    for i, pillar_label in enumerate(pillar_labels):
+        zhi = zhis[i]
+        hidden = ZHI_TO_HIDDEN_GAN[zhi]
+        if not hidden:
+            continue
+        parts = []
+        for gan in hidden:
+            element = GAN_TO_ELEMENT[gan]
+            cat = _relation_category(day_element, element)
+            relations.append((f"{pillar_label}支{zhi}{gan}({element})", cat))
+            parts.append(f"{gan}({element})={cat}")
+        line = " ".join(parts)
+        if pretty:
+            print(f"{pillar_label}藏干生克泄耗帮: {line}")
+        else:
+            print(f"{pillar_label}藏干:{line}")
+
+    # 汇总
+    assist = [label for label, cat in relations if cat in {"生", "帮"}]
+    leak = [label for label, cat in relations if cat == "泄"]
+    hinder = [label for label, cat in relations if cat in {"耗", "克"}]
+    if pretty:
+        print(f"助力(生/帮): {' '.join(assist) if assist else '-'}")
+        print(f"疏泄: {' '.join(leak) if leak else '-'}")
+        print(f"受阻(耗/克): {' '.join(hinder) if hinder else '-'}")
+    else:
+        print(f"助力:{' '.join(assist)}")
+        print(f"泄:{' '.join(leak)}")
+        print(f"耗克:{' '.join(hinder)}")
 
 
 def _solar_to_datetime(solar: Solar) -> datetime:
