@@ -100,6 +100,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="输出天干地支五行生克关系（柱内干支 + 日主关系 + 生克泄耗帮）",
     )
     parser.add_argument(
+        "--shishen-flow",
+        dest="shishen_flow",
+        action="store_true",
+        help="输出日主与各柱十神（天干+藏干）的生克泄耗帮关系",
+    )
+    parser.add_argument(
         "--qiangruo",
         "--strength",
         dest="qiangruo",
@@ -542,6 +548,38 @@ def _print_shishen(lunar: Lunar, *, pretty: bool) -> None:
         print(" ".join(zhi))
 
 
+def _print_shishen_flow(lunar: Lunar, *, pretty: bool) -> None:
+    pillars = lunar.getBaZi()
+    gans: list[str] = []
+    zhis: list[str] = []
+    for pillar in pillars:
+        gan, zhi = _split_ganzhi(pillar)
+        gans.append(gan)
+        zhis.append(zhi)
+
+    day_gan = gans[2]
+    day_element = GAN_TO_ELEMENT[day_gan]
+
+    def _cat(other_element: str) -> str:
+        return _relation_category(day_element, other_element)
+
+    labels = ["年柱", "月柱", "日柱", "时柱"]
+    for i, label in enumerate(labels):
+        gan = gans[i]
+        gan_element = GAN_TO_ELEMENT[gan]
+        gan_cat = _cat(gan_element)
+        hides = ZHI_TO_HIDDEN_GAN[zhis[i]]
+        parts = [f"干{gan}({gan_element})={gan_cat}"]
+        for hide in hides:
+            hide_element = GAN_TO_ELEMENT[hide]
+            parts.append(f"{hide}({hide_element})={_cat(hide_element)}")
+        line = " ".join(parts)
+        if pretty:
+            print(f"{label}十神流通: {line}")
+        else:
+            print(f"{label}:{line}")
+
+
 def _print_section(title: str, *, first: bool, pretty: bool) -> None:
     if not pretty:
         return
@@ -782,6 +820,8 @@ def main(argv: list[str]) -> int:
         _print_section("十神", first=section_first, pretty=ctx.pretty)
         section_first = False
         _print_shishen(ctx.chart_lunar, pretty=ctx.pretty)
+        if args.shishen_flow:
+            _print_shishen_flow(ctx.chart_lunar, pretty=ctx.pretty)
 
     if args.yun:
         _print_section("大运", first=section_first, pretty=ctx.pretty)
