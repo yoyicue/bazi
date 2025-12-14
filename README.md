@@ -23,6 +23,7 @@ python -m unittest -v
 python bazi.py 2025 12 14 12 0
 python bazi.py 2025 12 14 12 0 --pretty
 python bazi.py 2025 12 14 12 0 --pretty --shishen
+python bazi.py 2025 12 14 12 0 --pretty --shengke
 python bazi.py 2025 12 14 12 0 --pretty --qiangruo
 python bazi.py 1986 4 6 0 20 --pretty --yun --gender 男
 python bazi.py 1986 4 6 0 20 --pretty --yun  # 未指定性别则输出男/女两套

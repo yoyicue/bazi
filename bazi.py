@@ -14,6 +14,7 @@ from lunar_python.eightchar.DaYun import DaYun
 from lunar_python.util.LunarUtil import LunarUtil
 
 GAN_TO_ELEMENT: dict[str, str] = LunarUtil.WU_XING_GAN
+ZHI_TO_ELEMENT: dict[str, str] = LunarUtil.WU_XING_ZHI
 ZHI_TO_HIDDEN_GAN: dict[str, list[str]] = LunarUtil.ZHI_HIDE_GAN
 
 BJ_TZ = timezone(timedelta(hours=8))
@@ -90,6 +91,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--shishen",
         action="store_true",
         help="输出十神（天干十神与地支藏干十神）",
+    )
+    parser.add_argument(
+        "--shengke",
+        "--wuxing-rel",
+        dest="shengke",
+        action="store_true",
+        help="输出天干地支五行生克关系（柱内干支 + 日主关系）",
     )
     parser.add_argument(
         "--qiangruo",
@@ -520,6 +528,69 @@ def _print_shishen(lunar: Lunar, *, pretty: bool) -> None:
         print(" ".join(zhi))
 
 
+def _describe_wuxing_relation(
+    a_label: str,
+    a_char: str,
+    a_element: str,
+    b_label: str,
+    b_char: str,
+    b_element: str,
+) -> str:
+    if a_element == b_element:
+        return f"{a_label}{a_char}({a_element}) 同 {b_label}{b_char}({b_element})"
+    if ELEMENT_CHILD[a_element] == b_element:
+        return f"{a_label}{a_char}({a_element}) 生 {b_label}{b_char}({b_element})"
+    if ELEMENT_CHILD[b_element] == a_element:
+        return f"{b_label}{b_char}({b_element}) 生 {a_label}{a_char}({a_element})"
+    if ELEMENT_CONTROLS[a_element] == b_element:
+        return f"{a_label}{a_char}({a_element}) 克 {b_label}{b_char}({b_element})"
+    if ELEMENT_CONTROLS[b_element] == a_element:
+        return f"{b_label}{b_char}({b_element}) 克 {a_label}{a_char}({a_element})"
+    return f"{a_label}{a_char}({a_element}) ? {b_label}{b_char}({b_element})"
+
+
+def _print_shengke(lunar: Lunar, *, pretty: bool) -> None:
+    pillars = lunar.getBaZi()
+    gans: list[str] = []
+    zhis: list[str] = []
+    for pillar in pillars:
+        gan, zhi = _split_ganzhi(pillar)
+        gans.append(gan)
+        zhis.append(zhi)
+
+    pillar_labels = ["年柱", "月柱", "日柱", "时柱"]
+    for i, pillar_label in enumerate(pillar_labels):
+        gan = gans[i]
+        zhi = zhis[i]
+        gan_element = GAN_TO_ELEMENT[gan]
+        zhi_element = ZHI_TO_ELEMENT[zhi]
+        desc = _describe_wuxing_relation("干", gan, gan_element, "支", zhi, zhi_element)
+        if pretty:
+            print(f"{pillar_label}干支生克: {desc}")
+        else:
+            print(f"{pillar_label}:{desc}")
+
+    day_gan = gans[2]
+    day_element = GAN_TO_ELEMENT[day_gan]
+    for idx, label in ((0, "年干"), (1, "月干"), (3, "时干")):
+        other_gan = gans[idx]
+        other_element = GAN_TO_ELEMENT[other_gan]
+        desc = _describe_wuxing_relation("日干", day_gan, day_element, label, other_gan, other_element)
+        if pretty:
+            print(f"日主与天干生克: {desc}")
+        else:
+            print(desc)
+
+    for idx, label in ((0, "年支"), (1, "月支"), (3, "时支")):
+        other_zhi = zhis[idx]
+        other_element = ZHI_TO_ELEMENT[other_zhi]
+        desc = _describe_wuxing_relation("日干", day_gan, day_element, label, other_zhi, other_element)
+        if pretty:
+            print(f"日主与地支生克: {desc}")
+        else:
+            print(desc)
+
+
 def _solar_to_datetime(solar: Solar) -> datetime:
     return datetime(
         solar.getYear(),
@@ -641,6 +712,9 @@ def main(argv: list[str]) -> int:
 
     if args.shishen:
         _print_shishen(ctx.chart_lunar, pretty=ctx.pretty)
+
+    if args.shengke:
+        _print_shengke(ctx.chart_lunar, pretty=ctx.pretty)
 
     if args.qiangruo:
         _print_qiangruo(ctx.chart_lunar, pretty=ctx.pretty)
