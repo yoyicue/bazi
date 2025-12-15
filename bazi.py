@@ -121,6 +121,30 @@ def _render_sections(ctx: BaziContext) -> list[str]:
     # 基础
     lines.append("【基础】")
     lines.extend(format_base(ctx))
+    # 扩展事实（客观信息，不做喜忌判断）放在基础后
+    has_extra = (
+        ctx.args.lunar_info
+        or ctx.args.hidden_gan
+        or ctx.args.wuxing_count
+        or ctx.args.changsheng
+        or ctx.args.nayin
+        or ctx.args.kongwang
+    )
+    if has_extra:
+        lines.append("")
+        lines.append("【扩展事实】")
+        if ctx.args.lunar_info:
+            lines.extend(format_lunar_info(ctx.chart_lunar))
+        if ctx.args.hidden_gan:
+            lines.extend(format_hidden_gan(ctx.chart_lunar))
+        if ctx.args.wuxing_count:
+            lines.extend(format_wuxing_counts(ctx.chart_lunar))
+        if ctx.args.changsheng:
+            lines.extend(format_changsheng(ctx.chart_lunar))
+        if ctx.args.nayin:
+            lines.extend(format_nayin(ctx.chart_lunar))
+        if ctx.args.kongwang:
+            lines.extend(format_kongwang(ctx.chart_lunar))
 
     # 五行
     has_wuxing = ctx.args.shengke or ctx.args.qiangruo or ctx.args.yongshen
@@ -189,31 +213,6 @@ def _render_sections(ctx: BaziContext) -> list[str]:
                     liunian_count=ctx.args.liunian_count,
                 )
             )
-
-    # 扩展事实（客观信息，不做喜忌判断）
-    has_extra = (
-        ctx.args.lunar_info
-        or ctx.args.hidden_gan
-        or ctx.args.wuxing_count
-        or ctx.args.changsheng
-        or ctx.args.nayin
-        or ctx.args.kongwang
-    )
-    if has_extra:
-        lines.append("")
-        lines.append("【扩展事实】")
-        if ctx.args.lunar_info:
-            lines.extend(format_lunar_info(ctx.chart_lunar))
-        if ctx.args.hidden_gan:
-            lines.extend(format_hidden_gan(ctx.chart_lunar))
-        if ctx.args.wuxing_count:
-            lines.extend(format_wuxing_counts(ctx.chart_lunar))
-        if ctx.args.changsheng:
-            lines.extend(format_changsheng(ctx.chart_lunar))
-        if ctx.args.nayin:
-            lines.extend(format_nayin(ctx.chart_lunar))
-        if ctx.args.kongwang:
-            lines.extend(format_kongwang(ctx.chart_lunar))
 
     return lines
 
